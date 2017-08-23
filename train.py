@@ -123,7 +123,7 @@ with tf.device('/gpu:0'):
             print('准确率 ' + str(float(lev1)/(lev1+lev0)))
 
         # 每5000步测试一下
-        evaluate_every = 100
+        evaluate_every = 5000
         # 开始训练和测试
         sess.run(tf.global_variables_initializer())
         merged_summaries = tf.summary.merge_all()
