@@ -26,6 +26,8 @@ scripts/start_tensorboard.sh
 open http://localhost:6006
 ```
 
+> 在默认参数下，运行57,123 steps: loss 0.591968, acc 0.8
+
 ![](./assets/loss.png)
 
 # Data
