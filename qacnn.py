@@ -11,7 +11,7 @@ from __future__ import print_function
 from __future__ import division
 
 __copyright__ = "Copyright (c) 2017 Xuming Lin. All Rights Reserved"
-__author__    = "Xuming Lin"
+__author__    = "Xuming Lin, Hai Liang Wang<hailiang.hl.wang@gmail.com>"
 __date__      = "2017-08-21:23:30:05"
 
 
@@ -49,15 +49,15 @@ class QACNN(Model):
     def add_placeholders(self):
         # 问题
         self.q = tf.placeholder(np.int32,
-                shape=[self.config.batch_size, self.config.sequence_length],
+                shape=[None, self.config.sequence_length],
                 name='Question')
         # 正向回答
         self.aplus = tf.placeholder(np.int32,
-                shape=[self.config.batch_size, self.config.sequence_length],
+                shape=[None, self.config.sequence_length],
                 name='PosAns')
         # 负向回答
         self.aminus = tf.placeholder(np.int32,
-                shape=[self.config.batch_size, self.config.sequence_length],
+                shape=[None, self.config.sequence_length],
                 name='NegAns')
         # drop_out
         self.keep_prob = tf.placeholder(tf.float32, name='keep_prob')
@@ -148,6 +148,8 @@ class QACNN(Model):
         tf.add_to_collection('total_loss', loss)
         total_loss = tf.add_n(tf.get_collection('total_loss'))
         accu = tf.reduce_mean(tf.cast(tf.equal(zero, l), tf.float32))
+        tf.summary.scalar('loss', loss)
+        tf.summary.scalar('accuracy', accu)
         return total_loss, loss, accu
 
     # 训练节点
@@ -158,4 +160,3 @@ class QACNN(Model):
             opt = tf.train.AdamOptimizer(self.config.lr)
             train_op = opt.minimize(loss, self.global_step)
             return train_op
-
