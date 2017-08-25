@@ -20,6 +20,8 @@ pip install tensorflow-gpu==1.2
 python2 train.py
 ```
 
+Customize the hyper parameters: ```python2 train.py --help```
+
 # Metrics
 ```
 scripts/start_tensorboard.sh

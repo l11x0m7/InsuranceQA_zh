@@ -22,35 +22,48 @@ import datetime
 import operator
 import data
 
+flags, FLAGS = tf.app.flags, tf.app.flags.FLAGS
+
+flags.DEFINE_integer('sequence_length', 200, 'sequence length')  # noqa: skipped autopep8 checking
+flags.DEFINE_integer('num_epochs', 10000, 'epochs')  # noqa: skipped autopep8 checking
+flags.DEFINE_integer('batch_size', 100, 'min batch size')  # noqa: skipped autopep8 checking
+flags.DEFINE_integer('embedding_size', 100, 'embedding size')  # noqa: skipped autopep8 checking
+flags.DEFINE_integer('hidden_size', 80, 'hidden size')  # noqa: skipped autopep8 checking
+flags.DEFINE_integer('num_filters', 512, 'number of filters')  # noqa: skipped autopep8 checking
+flags.DEFINE_float('l2_reg_lambda', 0., 'L2 regularization factor')  # noqa: skipped autopep8 checking
+flags.DEFINE_float('keep_prob', 1.0, 'Dropout keep rate')  # noqa: skipped autopep8 checking
+flags.DEFINE_float('lr', 0.01, 'learning rate')  # noqa: skipped autopep8 checking
+flags.DEFINE_float('margin', 0.05, 'margin for computing loss')  # noqa: skipped autopep8 checking
+
 # Config函数
 class Config(object):
     def __init__(self, vocab_size):
         # 输入序列(句子)长度
-        self.sequence_length = 200
+        self.sequence_length = FLAGS.sequence_length
         # 循环数
-        self.num_epochs = 100000
+        self.num_epochs = FLAGS.num_epochs
         # batch大小
-        self.batch_size = 100
+        self.batch_size = FLAGS.batch_size
         # 词表大小
         self.vocab_size = vocab_size
         # 词向量大小
-        self.embedding_size = 100
+        self.embedding_size = FLAGS.embedding_size
         # 不同类型的filter,相当于1-gram,2-gram,3-gram和5-gram
         self.filter_sizes = [1, 2, 3, 5]
         # 隐层大小
-        self.hidden_size = 80
+        self.hidden_size = FLAGS.hidden_size
         # 每种filter的数量
-        self.num_filters = 512
+        self.num_filters = FLAGS.num_filters
         # 论文里给的是0.0001
-        self.l2_reg_lambda = 0.
+        self.l2_reg_lambda = FLAGS.l2_reg_lambda
         # dropout
-        self.keep_prob = 1.0
+        self.keep_prob = FLAGS.keep_prob
         # 学习率
         # 论文里给的是0.01
-        self.lr = 0.01
+        self.lr = FLAGS.lr
         # margin
         # 论文里给的是0.009
-        self.m = 0.05
+        self.m = FLAGS.margin
         # 设定GPU的性质,允许将不能在GPU上处理的部分放到CPU
         # 设置log打印
         self.cf = tf.ConfigProto(allow_soft_placement=True, log_device_placement=False)
@@ -149,3 +162,6 @@ with tf.device('/gpu:0'):
                     print("\n测试{}:".format((global_step+1)/evaluate_every))
                     dev_step()
                     print
+
+if __name__ == '__main__':
+    tf.app.run()
