@@ -143,7 +143,7 @@ with tf.device('/gpu:0'):
         for i in range(config.num_epochs):
             for (_, x_question, x_utterance, y) in data.load_train(config.batch_size, config.sequence_length, config.sequence_length):
                 if len(_) == config.batch_size: # 在epoch的最后一个mini batch中，数据条数可能不等于 batch_size
-                    train_step(x_question, x_utterance, y)
+                    _, global_step, _, _ = train_step(x_question, x_utterance, y)
 
                 if (global_step+1) % evaluate_every == 0:
                     print("\n测试{}:".format((global_step+1)/evaluate_every))
