@@ -2,7 +2,7 @@
 Question and Answering Language Model
 
 # Welcome
-Convolutional Neural Network for Chinese InsuranceQA Corpus with TensorFlow.
+Convolutional Neural Network for Chinese InsuranceQA Corpus with TensorFlow, implementation of paper ["Applying Deep Learning to Answer Selection: A Study and An Open Task"](https://arxiv.org/abs/1508.01585).
 
 ![](./assets/nn.png)
 
@@ -34,6 +34,19 @@ open http://localhost:6006
 
 # Data
 [insuranceQA Chinese Corpus](https://github.com/Samurais/insuranceqa-corpus-zh)
+
+# Documentation
+https://github.com/l11x0m7/InsuranceQA_zh/wiki
+
+* 网络设计
+
+* 数据设计
+
+* 调优过程
+
+* 结果
+
+* 参考文献
 
 # Others
 [insuranceQA English Corpus](https://github.com/l11x0m7/InsuranceQA)
