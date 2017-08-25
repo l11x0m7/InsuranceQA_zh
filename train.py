@@ -84,10 +84,11 @@ vocab = data.vocab_data
 # 配置文件
 config = Config(len(vocab['word2id']))
 
-
-# 开始训练和测试
-with tf.device('/gpu:0'):
-    with tf.Session(config=config.cf) as sess:
+def main(unused_argv):
+    '''
+    开始训练和测试
+    '''
+    with tf.device('/gpu:0'), tf.Session(config=config.cf) as sess:
         # 建立CNN网络
         cnn = QACNN(config, sess)
         # 保存Metrics数据
