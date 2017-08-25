@@ -74,13 +74,18 @@ config = Config(len(vocab['word2id']))
 
 # 开始训练和测试
 with tf.device('/gpu:0'):
-    # 保存模型
-    tf_writer = tf.summary.FileWriter(os.path.join(curdir, 'sdist/'))
     with tf.Session(config=config.cf) as sess:
         # 建立CNN网络
         cnn = QACNN(config, sess)
+        # 保存Metrics数据
+        tf_writer = tf.summary.FileWriter(logdir=os.path.join(curdir, 'sdist/'), graph=sess.graph)
+        # Summaries for loss and accuracy during training
+        summary_loss = tf.summary.scalar("train/loss", cnn.loss)
+        summary_accu = tf.summary.scalar("train/accuracy", cnn.accu)
+        summary_op = tf.summary.merge([summary_loss, summary_accu])
+
         # 训练函数
-        def train_step(x_batch_1, x_batch_2, x_batch_3, summaries):
+        def train_step(x_batch_1, x_batch_2, x_batch_3):
             feed_dict = {
                 cnn.q: x_batch_1,
                 cnn.aplus: x_batch_2,
@@ -88,51 +93,57 @@ with tf.device('/gpu:0'):
                 cnn.keep_prob: config.keep_prob
             }
             _, step, loss, accuracy, summaries = sess.run(
-                [cnn.train_op, cnn.global_step, cnn.loss, cnn.accu, summaries],
+                [cnn.train_op, cnn.global_step, cnn.loss, cnn.accu, summary_op],
                 feed_dict)
+            tf_writer.add_summary(summaries, step)
             time_str = datetime.datetime.now().isoformat()
             print("{}: step {}, loss {:g}, acc {:g}".format(time_str, step, loss, accuracy))
-            return time_str, step, loss, accuracy, summaries
+            return time_str, step, loss, accuracy
 
         # 测试函数
         def dev_step():
             results = dict()
+            losses = []
             for qids, x_test_1, x_test_2, labels in data.load_valid(config.batch_size, config.sequence_length, config.sequence_length):
-                if len(qids) == config.batch_size:
-                    feed_dict = {
-                        cnn.q: x_test_1,
-                        cnn.aplus: x_test_2,
-                        cnn.aminus: x_test_2,
-                        cnn.keep_prob: 1.0
-                    }
-                    batch_scores = sess.run(cnn.q_ap_cosine, feed_dict)
-                    for score, qid, label in zip(batch_scores, qids, labels):
-                        results[qid] = [score, label]
+                if len(qids) != config.batch_size:
+                    break
+                feed_dict = {
+                    cnn.q: x_test_1,
+                    cnn.aplus: x_test_2,
+                    cnn.aminus: x_test_2,
+                    cnn.keep_prob: 1.0
+                }
+                batch_scores, step, loss = sess.run([cnn.q_ap_cosine, cnn.global_step, cnn.loss], feed_dict)
+                losses.append(loss)
+                for score, qid, label in zip(batch_scores, qids, labels):
+                    results[qid] = [score, label]
             lev1 = .0
             lev0 = .0
             for k, v in results.items():
-                # 使用0.7作为判定为正例的 Threshold
+                # 使用0.5作为判定为正例的 Threshold
                 # TODO for better evaluation, should use Roc Curve to find the best threshold
-                if v[0] >= 0.7:
+                if v[0] >= 0.5:
                     lev1 += 1
                 else:
                     lev0 += 1
-            # 回答的正确数和错误数
+            # 评测回答的正确数和错误数
+            accuracy = float(lev1)/(lev1+lev0)
+            tf_writer.add_summary(tf.Summary(value=[
+                tf.Summary.Value(tag="evaluate/loss", simple_value=tf.reduce_mean(losses).eval()),
+                tf.Summary.Value(tag="evaluate/accuracy", simple_value=accuracy)]), step)
+
             print('回答正确数 ' + str(lev1))
             print('回答错误数 ' + str(lev0))
-            print('准确率 ' + str(float(lev1)/(lev1+lev0)))
+            print('准确率 ' + str(accuracy))
 
-        # 每5000步测试一下
-        evaluate_every = 5000
+        # 每500步测试一下
+        evaluate_every = 500
         # 开始训练和测试
         sess.run(tf.global_variables_initializer())
-        merged_summaries = tf.summary.merge_all()
-        tf_writer.add_graph(sess.graph)
         for i in range(config.num_epochs):
             for (_, x_question, x_utterance, y) in data.load_train(config.batch_size, config.sequence_length, config.sequence_length):
                 if len(_) == config.batch_size: # 在epoch的最后一个mini batch中，数据条数可能不等于 batch_size
-                    _, global_step, _, _, summaries = train_step(x_question, x_utterance, y, merged_summaries)
-                    tf_writer.add_summary(summaries, global_step)
+                    train_step(x_question, x_utterance, y)
 
                 if (global_step+1) % evaluate_every == 0:
                     print("\n测试{}:".format((global_step+1)/evaluate_every))

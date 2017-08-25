@@ -50,7 +50,6 @@ _valid_data = insuranceqa.load_pairs_valid()
 build vocab data with more placeholder
 '''
 vocab_data = insuranceqa.load_pairs_vocab()
-print("keys", vocab_data.keys())
 vocab_size = len(vocab_data['word2id'].keys())
 VOCAB_PAD_ID = vocab_size+1
 VOCAB_GO_ID = vocab_size+2
@@ -164,7 +163,6 @@ def __resolve_train_data(data, batch_size, question_max_length = 20, utterance_m
             pos_answers.append(pu)
             neg_answers.append(nu)
         if len(questions) > 0:
-            # print('data in batch:%d' % len(mini_batch))
             yield qids, questions, pos_answers, neg_answers
         else:
             raise StopIteration

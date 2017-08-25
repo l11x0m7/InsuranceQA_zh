@@ -148,8 +148,6 @@ class QACNN(Model):
         tf.add_to_collection('total_loss', loss)
         total_loss = tf.add_n(tf.get_collection('total_loss'))
         accu = tf.reduce_mean(tf.cast(tf.equal(zero, l), tf.float32))
-        tf.summary.scalar('loss', loss)
-        tf.summary.scalar('accuracy', accu)
         return total_loss, loss, accu
 
     # 训练节点
