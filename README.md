@@ -11,8 +11,7 @@ Convolutional Neural Network for Chinese InsuranceQA Corpus with TensorFlow, imp
 * TensorFlow v1.0+
 
 ```
-pip install --upgrade insuranceqa_data
-pip install tensorflow-gpu==1.2
+pip install -r Requirements.txt
 ```
 
 # Train

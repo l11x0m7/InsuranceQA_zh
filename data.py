@@ -145,6 +145,8 @@ def pack_question_n_utterance(q, p_u, n_u=None, q_length = 20, u_length = 99):
         return q, p_u, n_u
     return q, p_u
 
+scale_digit= lambda x: x*0.001
+
 def __resolve_train_data(data, batch_size, question_max_length = 20, utterance_max_length = 99):
     '''
     resolve train data
@@ -159,9 +161,9 @@ def __resolve_train_data(data, batch_size, question_max_length = 20, utterance_m
         for o in mini_batch:
             q, pu, nu = pack_question_n_utterance(o['question'], o['pos_utterance'], o['neg_utterance'], question_max_length, utterance_max_length)
             qids.append(o['qid'])
-            questions.append(q)
-            pos_answers.append(pu)
-            neg_answers.append(nu)
+            questions.append(map(scale_digit, q))
+            pos_answers.append(map(scale_digit, pu))
+            neg_answers.append(map(scale_digit, nu))
         if len(questions) > 0:
             yield qids, questions, pos_answers, neg_answers
         else:
@@ -203,17 +205,21 @@ def load_test(question_max_length = 20, utterance_max_length = 99):
     load test data
     '''
     questions = []
-    answers = []
+    utterances = []
     labels = []
     qids = []
     for o in _test_data:
         qid = o['qid']
-        q, pu = pack_question_n_utterance(o['question'], o['utterance'], None, question_max_length, utterance_max_length)
+        q, pu = pack_question_n_utterance(o['question'],
+                                          o['utterance'],
+                                          None,
+                                          question_max_length,
+                                          utterance_max_length)
         qids.append(qid)
-        questions.append(q)
-        answers.append(pu)
-        labels.append(np.argmax(o['label']))
-    return qids, questions, answers, labels
+        questions.append(map(scale_digit, q))
+        utterances.append(map(scale_digit, pu))
+        labels.append(0 if np.argmax(o['label']) == 1 else 1)
+    return zip(qids, questions, utterances, labels)
 
 def load_valid(batch_size = 100, question_max_length = 20, utterance_max_length = 99):
     '''

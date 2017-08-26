@@ -43,7 +43,7 @@ class QACNN(Model):
         self.total_loss, self.loss, self.accu = self.add_loss_op(self.q_ap_cosine, self.q_am_cosine)
         # 训练节点
         self.train_op = self.add_train_op(self.total_loss)
-
+        self._PREDICT_NEG = np.zeros([self.config.batch_size, self.config.sequence_length])
 
     # 输入
     def add_placeholders(self):
@@ -158,3 +158,22 @@ class QACNN(Model):
             opt = tf.train.AdamOptimizer(self.config.lr)
             train_op = opt.minimize(loss, self.global_step)
             return train_op
+
+    # 预测分数
+    def predict(self, input_data, input_labels=None):
+        # padding question token data
+        _question = np.zeros([self.config.batch_size, self.config.sequence_length])
+        _utterance = np.zeros([self.config.batch_size, self.config.sequence_length])
+        
+        _question[0] = input_data['question']
+        _utterance[0] = input_data['utterance']
+
+        feed_dict = {
+            self.q: _question,
+            self.aplus: _utterance,
+            self.aminus: self._PREDICT_NEG,
+            self.keep_prob: 1.0
+        }
+        batch_scores, step, loss = self.sess.run([self.q_ap_cosine, self.global_step, self.loss], feed_dict)
+        score = batch_scores[0]
+        return step, loss, score

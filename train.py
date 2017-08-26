@@ -17,6 +17,8 @@ import os
 curdir = os.path.dirname(os.path.abspath(__file__))
 
 from qacnn import QACNN
+from sklearn import metrics
+from tqdm import tqdm
 import tensorflow as tf
 import datetime
 import operator
@@ -24,15 +26,16 @@ import data
 
 flags, FLAGS = tf.app.flags, tf.app.flags.FLAGS
 
-flags.DEFINE_integer('sequence_length', 200, 'sequence length')  # noqa: skipped autopep8 checking
-flags.DEFINE_integer('num_epochs', 10000, 'epochs')  # noqa: skipped autopep8 checking
+flags.DEFINE_integer('sequence_length', 100, 'sequence length')  # noqa: skipped autopep8 checking
+flags.DEFINE_integer('evaluate_every', 1000, 'evaluate every N steps')  # noqa: skipped autopep8 checking
+flags.DEFINE_integer('num_epochs', 300, 'epochs')  # noqa: skipped autopep8 checking
 flags.DEFINE_integer('batch_size', 100, 'min batch size')  # noqa: skipped autopep8 checking
-flags.DEFINE_integer('embedding_size', 100, 'embedding size')  # noqa: skipped autopep8 checking
+flags.DEFINE_integer('embedding_size', 50, 'embedding size')  # noqa: skipped autopep8 checking
 flags.DEFINE_integer('hidden_size', 80, 'hidden size')  # noqa: skipped autopep8 checking
 flags.DEFINE_integer('num_filters', 512, 'number of filters')  # noqa: skipped autopep8 checking
 flags.DEFINE_float('l2_reg_lambda', 0., 'L2 regularization factor')  # noqa: skipped autopep8 checking
 flags.DEFINE_float('keep_prob', 1.0, 'Dropout keep rate')  # noqa: skipped autopep8 checking
-flags.DEFINE_float('lr', 0.01, 'learning rate')  # noqa: skipped autopep8 checking
+flags.DEFINE_float('lr', 0.001, 'learning rate')  # noqa: skipped autopep8 checking
 flags.DEFINE_float('margin', 0.05, 'margin for computing loss')  # noqa: skipped autopep8 checking
 
 # Config函数
@@ -74,6 +77,7 @@ class Config(object):
         self.cf.gpu_options.allow_growth=True
         # 只占用20%的GPU内存
         # self.cf.gpu_options.per_process_gpu_memory_fraction = 0.2
+        self.test_data = data.load_test(self.sequence_length, self.sequence_length)
 
 
 print('Loading Data...')
@@ -115,43 +119,47 @@ def main(unused_argv):
             return time_str, step, loss, accuracy
 
         # 测试函数
-        def dev_step():
-            results = dict()
+        def dev_step(step):
+            # 混淆矩阵建立评估
+            # http://www.uta.fi/sis/tie/tl/index/Rates.pdf
+            quality = {'tp': 0, 'tn': 0, 'fp': 0, 'fn': 0}
             losses = []
-            for qids, x_test_1, x_test_2, labels in data.load_valid(config.batch_size, config.sequence_length, config.sequence_length):
-                if len(qids) != config.batch_size:
-                    break
-                feed_dict = {
-                    cnn.q: x_test_1,
-                    cnn.aplus: x_test_2,
-                    cnn.aminus: x_test_2,
-                    cnn.keep_prob: 1.0
-                }
-                batch_scores, step, loss = sess.run([cnn.q_ap_cosine, cnn.global_step, cnn.loss], feed_dict)
+            labels = []
+            scores = []
+            pbar = tqdm(config.test_data)
+            pbar.set_description("evaluate step %s" % step)
+            for x in pbar:
+                _, loss, score = cnn.predict(dict({
+                                 'question': x[1],
+                                 'utterance': x[2]
+                                 }), x[3])
+                scores.append(score)
                 losses.append(loss)
-                for score, qid, label in zip(batch_scores, qids, labels):
-                    results[qid] = [score, label]
-            lev1 = .0
-            lev0 = .0
-            for k, v in results.items():
-                # 使用0.5作为判定为正例的 Threshold
-                # TODO for better evaluation, should use Roc Curve to find the best threshold
-                if v[0] >= 0.5:
-                    lev1 += 1
-                else:
-                    lev0 += 1
-            # 评测回答的正确数和错误数
-            accuracy = float(lev1)/(lev1+lev0)
+                labels.append(x[3])
+
+            # 使用Roc Curve生成Threshold
+            # http://alexkong.net/2013/06/introduction-to-auc-and-roc/
+            fpr, tpr, th = metrics.roc_curve(labels, scores)
+            threshold = round(metrics.auc(fpr, tpr), 5)
+            
+            if score >= threshold and x[3]==1:
+                quality['tp'] += 1
+            elif score >= threshold and x[3]==0:
+                quality['fp'] += 1
+            elif score < threshold and x[3]==1:
+                quality['fn'] += 1
+            else:
+                quality['tn'] += 1
+
+            accuracy = float(quality['tp'] + quality['tn'] )/(quality['tp'] + quality['tn'] + quality['fp'] + quality['fn'])
+            loss = tf.reduce_mean(losses).eval()
             tf_writer.add_summary(tf.Summary(value=[
-                tf.Summary.Value(tag="evaluate/loss", simple_value=tf.reduce_mean(losses).eval()),
+                tf.Summary.Value(tag="evaluate/loss", simple_value=loss),
                 tf.Summary.Value(tag="evaluate/accuracy", simple_value=accuracy)]), step)
 
-            print('回答正确数 ' + str(lev1))
-            print('回答错误数 ' + str(lev0))
-            print('准确率 ' + str(accuracy))
+            print('evaluation @ step %d: 准确率: %d, 损失函数: %s, threshold: %d' % (step, accuracy, loss, threshold))
 
         # 每500步测试一下
-        evaluate_every = 500
         # 开始训练和测试
         sess.run(tf.global_variables_initializer())
         for i in range(config.num_epochs):
@@ -159,10 +167,8 @@ def main(unused_argv):
                 if len(_) == config.batch_size: # 在epoch的最后一个mini batch中，数据条数可能不等于 batch_size
                     _, global_step, _, _ = train_step(x_question, x_utterance, y)
 
-                if (global_step+1) % evaluate_every == 0:
-                    print("\n测试{}:".format((global_step+1)/evaluate_every))
-                    dev_step()
-                    print
+                if global_step % FLAGS.evaluate_every == 0:
+                    dev_step(global_step)
 
 if __name__ == '__main__':
     tf.app.run()
