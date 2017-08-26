@@ -205,17 +205,21 @@ def load_test(question_max_length = 20, utterance_max_length = 99):
     load test data
     '''
     questions = []
-    answers = []
+    utterances = []
     labels = []
     qids = []
     for o in _test_data:
         qid = o['qid']
-        q, pu = pack_question_n_utterance(o['question'], o['utterance'], None, question_max_length, utterance_max_length)
+        q, pu = pack_question_n_utterance(o['question'],
+                                          o['utterance'],
+                                          None,
+                                          question_max_length,
+                                          utterance_max_length)
         qids.append(qid)
-        questions.append(q)
-        answers.append(pu)
-        labels.append(np.argmax(o['label']))
-    return qids, questions, answers, labels
+        questions.append(map(scale_digit, q))
+        utterances.append(map(scale_digit, pu))
+        labels.append(0 if np.argmax(o['label']) == 1 else 1)
+    return zip(qids, questions, utterances, labels)
 
 def load_valid(batch_size = 100, question_max_length = 20, utterance_max_length = 99):
     '''
