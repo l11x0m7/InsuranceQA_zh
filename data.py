@@ -67,7 +67,7 @@ def combine_pos_and_neg_sample(data):
     for x in data:
         qa.setdefault(x['qid'], ["", [], []])
         qa[x['qid']][0] = x['question']
-        if x['label'] == [0, 1]:
+        if x['label'] == [1, 0]:
             qa[x['qid']][1].append(x['utterance'])
         else:
             qa[x['qid']][2].append(x['utterance'])
