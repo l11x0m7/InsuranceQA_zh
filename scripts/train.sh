@@ -16,4 +16,5 @@ rm -rf sdist
 set -x
 python2 train.py \
     --keep_prob 0.8 \
-    --lr 0.0001
+    --lr 0.0001 \
+    --evaluate_every 5000 \
