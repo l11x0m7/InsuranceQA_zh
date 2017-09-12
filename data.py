@@ -161,9 +161,9 @@ def __resolve_train_data(data, batch_size, question_max_length = 20, utterance_m
         for o in mini_batch:
             q, pu, nu = pack_question_n_utterance(o['question'], o['pos_utterance'], o['neg_utterance'], question_max_length, utterance_max_length)
             qids.append(o['qid'])
-            questions.append(map(scale_digit, q))
-            pos_answers.append(map(scale_digit, pu))
-            neg_answers.append(map(scale_digit, nu))
+            questions.append(list(map(scale_digit, q)))
+            pos_answers.append(list(map(scale_digit, pu)))
+            neg_answers.append(list(map(scale_digit, nu)))
         if len(questions) > 0:
             yield qids, questions, pos_answers, neg_answers
         else:
@@ -216,8 +216,8 @@ def load_test(question_max_length = 20, utterance_max_length = 99):
                                           question_max_length,
                                           utterance_max_length)
         qids.append(qid)
-        questions.append(map(scale_digit, q))
-        utterances.append(map(scale_digit, pu))
+        questions.append(list(map(scale_digit, q)))
+        utterances.append(list(map(scale_digit, pu)))
         labels.append(0 if np.argmax(o['label']) == 1 else 1)
     return zip(qids, questions, utterances, labels)
 

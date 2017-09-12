@@ -27,7 +27,7 @@ import data
 flags, FLAGS = tf.app.flags, tf.app.flags.FLAGS
 
 flags.DEFINE_integer('sequence_length', 100, 'sequence length')  # noqa: skipped autopep8 checking
-flags.DEFINE_integer('evaluate_every', 1000, 'evaluate every N steps')  # noqa: skipped autopep8 checking
+flags.DEFINE_integer('evaluate_every', 1, 'evaluate every N steps')  # noqa: skipped autopep8 checking
 flags.DEFINE_integer('num_epochs', 300, 'epochs')  # noqa: skipped autopep8 checking
 flags.DEFINE_integer('batch_size', 100, 'min batch size')  # noqa: skipped autopep8 checking
 flags.DEFINE_integer('embedding_size', 50, 'embedding size')  # noqa: skipped autopep8 checking

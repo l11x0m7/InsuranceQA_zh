@@ -43,7 +43,7 @@ class QACNN(Model):
         self.total_loss, self.loss, self.accu = self.add_loss_op(self.q_ap_cosine, self.q_am_cosine)
         # 训练节点
         self.train_op = self.add_train_op(self.total_loss)
-        self._PREDICT_NEG = np.zeros([self.config.batch_size, self.config.sequence_length])
+        self._PREDICT_NEG = np.zeros([1, self.config.sequence_length, ])
 
     # 输入
     def add_placeholders(self):
@@ -76,9 +76,9 @@ class QACNN(Model):
         with tf.variable_scope('HL'):
             W = tf.get_variable('weights', shape=[self.config.embedding_size, self.config.hidden_size], initializer=tf.uniform_unit_scaling_initializer())
             b = tf.get_variable('biases', initializer=tf.constant(0.1, shape=[self.config.hidden_size]))
-            h_q = tf.reshape(tf.nn.tanh(tf.matmul(tf.reshape(q_embed, [-1, self.config.embedding_size]), W)+b), [self.config.batch_size, self.config.sequence_length, -1])
-            h_ap = tf.reshape(tf.nn.tanh(tf.matmul(tf.reshape(aplus_embed, [-1, self.config.embedding_size]), W)+b), [self.config.batch_size, self.config.sequence_length, -1])
-            h_am = tf.reshape(tf.nn.tanh(tf.matmul(tf.reshape(aminus_embed, [-1, self.config.embedding_size]), W)+b), [self.config.batch_size, self.config.sequence_length, -1])
+            h_q = tf.reshape(tf.nn.tanh(tf.matmul(tf.reshape(q_embed, [-1, self.config.embedding_size]), W)+b), [-1, self.config.sequence_length, self.config.hidden_size])
+            h_ap = tf.reshape(tf.nn.tanh(tf.matmul(tf.reshape(aplus_embed, [-1, self.config.embedding_size]), W)+b), [-1, self.config.sequence_length, self.config.hidden_size])
+            h_am = tf.reshape(tf.nn.tanh(tf.matmul(tf.reshape(aminus_embed, [-1, self.config.embedding_size]), W)+b), [-1, self.config.sequence_length, self.config.hidden_size])
             tf.add_to_collection('total_loss', 0.5*self.config.l2_reg_lambda*tf.nn.l2_loss(W))
             return h_q, h_ap, h_am
 
@@ -162,11 +162,8 @@ class QACNN(Model):
     # 预测分数
     def predict(self, input_data, input_labels=None):
         # padding question token data
-        _question = np.zeros([self.config.batch_size, self.config.sequence_length])
-        _utterance = np.zeros([self.config.batch_size, self.config.sequence_length])
-        
-        _question[0] = input_data['question']
-        _utterance[0] = input_data['utterance']
+        _question = np.reshape(input_data['question'], [1, -1])
+        _utterance = np.reshape(input_data['utterance'], [1, -1])
 
         feed_dict = {
             self.q: _question,
